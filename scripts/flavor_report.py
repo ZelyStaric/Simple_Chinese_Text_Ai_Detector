@@ -29,6 +29,20 @@ def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
 
 
+def strip_structure(t):
+    """文档体裁模式：剥离 markdown/结构标记，只留文字，避免被格式特征带偏。"""
+    t = re.sub(r"```.*?```", " ", t, flags=re.S)
+    t = re.sub(r"`([^`]*)`", r"\1", t)
+    t = re.sub(r"^\s*#{1,6}\s*", "", t, flags=re.M)
+    t = re.sub(r"\*\*([^*]+)\*\*", r"\1", t)
+    t = re.sub(r"\*([^*]+)\*", r"\1", t)
+    t = re.sub(r"^\s*\|.*$", "", t, flags=re.M)
+    t = re.sub(r"^\s*[-*+]\s+", "", t, flags=re.M)
+    t = re.sub(r"^\s*\d+[.)、]\s+", "", t, flags=re.M)
+    t = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", t)
+    return re.sub(r"\s+", " ", t).strip()
+
+
 def predict_windows(model, tok, text, meta, dev):
     ids = tok(text, truncation=False)["input_ids"]
     W = meta["max_len"]; S = max(64, W // 2)
@@ -68,11 +82,14 @@ def main():
     ap.add_argument("--model", default=os.path.join(ROOT, "models", "encoder_v9"))
     ap.add_argument("--baseline", default="tech_blog", choices=["tech_blog", "all", "human_news", "human_social"])
     ap.add_argument("--lam", type=float, default=1.0)
+    ap.add_argument("--mode", choices=["prose", "doc"], default="prose",
+                    help="doc：剥离 markdown/结构标记，适合 README/文档/PPT（避免格式特征误伤）")
     a = ap.parse_args()
     dev = "cuda" if torch.cuda.is_available() else "cpu"
 
     text = open(a.text, encoding="utf-8").read()
     text_n = re.sub(r"\s+", " ", text).strip()          # 与训练一致的空白归一化
+    text_m = strip_structure(text_n) if a.mode == "doc" else text_n
     base = json.load(open(os.path.join(HUM, "style_baseline.json")))
     b = base["baselines"][a.baseline]
     mu, sd = np.array(b["mean"]), np.array(b["std"])
@@ -83,10 +100,10 @@ def main():
     nlab = meta.get("num_labels", 2)
     model = Hybrid(meta["base"], len(meta["style_mean"]), num_labels=nlab).to(dev)
     model.load_state_dict(torch.load(os.path.join(a.model, "model.pt"), map_location=dev)); model.eval()
-    P, nwin = predict_windows(model, tok, text_n, meta, dev)
+    P, nwin = predict_windows(model, tok, text_m, meta, dev)
     clf_ai = float(1 - P[0]) if nlab == 2 else float(1 - P[0])   # 非人类即 AI 味
 
-    x = FEAT.extract(text_n, base["feature_kind"])
+    x = FEAT.extract(text_m, base["feature_kind"])
     z = (x - mu) / sd
     zc = {f: float(z[names.index(f)]) for f in FOCUS}
     agg = float(np.mean([max(0.0, v) for v in zc.values()]))

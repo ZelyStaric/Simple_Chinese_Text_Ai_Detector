@@ -32,23 +32,23 @@ scripts/
   style_features.py      # 表层风格特征（破折号/冒号/括号名词解释/表格/套话/排比/句长节奏…）
   logic_features.py      # 语句逻辑与语气特征（报幕/因果/对比公式/评价收口/总分总/句首连词）
   features.py            # 统一特征入口（style / style+logic）
-  build_dataset*.py      # 各版本数据集构建（去重、按生成器/域切分、留出生成器与留出域）
+  build_dataset_v9.py    # 数据集构建（去重、按生成器/域切分、留出生成器与留出域）
   fetch_wiki_zh.py       # 抓中文维基长文（人类长文）
-  fetch_human_blogs*.py  # 抓真人中文技术博客（人类锚点）
+  fetch_human_blogs2.py  # 抓真人中文技术博客（人类锚点）
   fetch_human_wechat.py  # 抓真人「公众号风」文章（人类锚点）
   build_human_domain.py  # 真人新闻/社交语料
   build_gpt4_zh.py       # 从 GPT-4 中文语料抽长文（AI）
   gen_unseen.py          # 调本地/兼容 OpenAI 端点生成未见生成器语料
   gen_selfstyle.py       # 用同一模型生成/去味改写（含公众号体裁）
-  train.py               # 基线分类器（HF Trainer）
   train_hybrid.py        # 编码器 + 显式特征通道（二分类，含温度校准）
   train3.py              # 三类：human / AI / AI-edited
-  evaluate.py eval_gen.py eval_hybrid.py eval3.py breakdown.py
+  eval_hybrid.py eval3.py breakdown.py   # 评测
   score_text.py          # 给一整篇文章打 AI 分（滑窗）
   flavor_report.py       # ★ AI 味报告：分类器 + 话语脚手架融合 + 逐段定位
   style_compare.py style_model.py build_style_baseline.py
-results/                 # 实验报告（REPORT.md 为总记录）
-PLAN.md                  # 分阶段计划
+  plot_results.py        # 生成 assets/results.png
+results/                 # 实验报告（REPORT.md）
+assets/                  # 结果图
 ```
 
 ## 快速使用
@@ -67,6 +67,8 @@ HIP_VISIBLE_DEVICES=0 ./env/bin/python scripts/train_hybrid.py \
 
 # 4) 出一份 AI 味报告
 ./env/bin/python scripts/flavor_report.py --text 文章.txt --model models/encoder_v9 --baseline tech_blog
+#    文档体裁（README / PPT / 说明书等强结构文本）加 --mode doc：先剥离 markdown/结构标记，避免被格式特征误伤
+./env/bin/python scripts/flavor_report.py --text README.md --mode doc
 ```
 
 ## 数据来源（未随仓库分发）
