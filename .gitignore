@@ -1,0 +1,34 @@
+# 环境 / 模型 / 数据（体积、版权、隐私，均不入库）
+env/
+models/
+data/
+
+# 密钥与本地配置
+*auth.json
+*.keys
+opencode.jsonc*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 日志与临时
+*.log
+results/*.log
+*.tmp
+
+# 大文件兜底
+*.pt
+*.safetensors
+*.gguf
+*.parquet
+*.arrow
+
+# 运行标记
+results/*.DONE
+
+# 含个人内容的报告不公开
+results/REPORT_full.md
+results/blog_review.md

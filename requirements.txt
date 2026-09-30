@@ -1,0 +1,20 @@
+# 运行环境依赖（Python 3.10+）
+# 安装示例：
+#   python -m venv env && ./env/bin/pip install -r requirements.txt
+#
+# 注意：torch 需按平台选择构建。想用 AMD GPU（ROCm）时：
+#   pip install torch --index-url https://download.pytorch.org/whl/rocm6.2
+# 纯 CPU 用户可安装默认的 CPU 版 torch。
+
+torch>=2.2
+transformers>=4.46
+datasets>=2.19
+scikit-learn>=1.3
+numpy>=1.26
+pandas>=2.0
+pyarrow>=14.0
+tqdm>=4.66
+beautifulsoup4>=4.12
+lxml>=5.0
+matplotlib>=3.8
+requests>=2.31
