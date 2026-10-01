@@ -22,16 +22,17 @@ def load(p):
 
 
 def predict_windows(model, tok, text, meta, dev):
-    ids = tok(text, truncation=False)["input_ids"]
-    W = meta["max_len"]; S = max(64, W // 2)
-    wins = [ids[i:i + W] for i in range(0, max(1, len(ids)), S)]
-    wins = [w for w in wins if w]
+    # 按字符切窗并重新 tokenize（保留 [CLS]/[SEP]），避免直接切 token 丢特殊符号
+    W = meta["max_len"]
+    chars = max(400, W * 2); step = max(200, chars // 2)
+    chunks = [c for c in (text[i:i + chars] for i in range(0, max(1, len(text)), step)) if c.strip()]
     st_row = FEAT.extract(text, meta.get("feature_kind", "style"))
     mu = np.array(meta["style_mean"]); sd = np.array(meta["style_std"])
     ps = []
     with torch.no_grad(), ac(dev):
-        for w in wins:
-            inp = torch.tensor([w]).to(dev); am = torch.ones_like(inp)
+        for c in chunks:
+            ids = tok(c, truncation=True, max_length=W)["input_ids"]
+            inp = torch.tensor([ids]).to(dev); am = torch.ones_like(inp)
             if meta["no_style"]:
                 st = torch.zeros(1, 0).to(dev)
             else:

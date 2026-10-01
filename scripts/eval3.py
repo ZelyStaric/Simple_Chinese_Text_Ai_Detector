@@ -66,16 +66,18 @@ def main():
         print(f"  {d:16s} {len(arr):5d} {dict((int(k),int(v)) for k,v in zip(*np.unique(arr[:,0],return_counts=True)))}  "
               f"acc={(arr[:,0]==arr[:,1]).mean():.3f}")
 
-    # 博客多窗口打分
+    # 博客多窗口打分（按字符切窗并重新 tokenize，保留特殊符号）
     txt = open(a.text, encoding="utf-8").read()
-    ids = tok(txt, truncation=False)["input_ids"]; W = meta["max_len"]; S = max(64, W // 2)
-    wins = [ids[i:i + W] for i in range(0, max(1, len(ids)), S) if ids[i:i + W]]
+    W = meta["max_len"]; chars = max(400, W * 2); step = max(200, chars // 2)
+    wins = [txt[i:i + chars] for i in range(0, max(1, len(txt)), step)]
+    wins = [w for w in wins if w.strip()]
     st_row = ((FEAT.extract(txt, meta["feature_kind"]) - np.array(meta["style_mean"])) /
               np.array(meta["style_std"])).astype(np.float32)
     probs = []
     with torch.no_grad(), ac(dev):
         for w in wins:
-            lg = model(torch.tensor([w]).to(dev), torch.ones(1, len(w), dtype=torch.long).to(dev),
+            ids = tok(w, truncation=True, max_length=W)["input_ids"]
+            lg = model(torch.tensor([ids]).to(dev), torch.ones(1, len(ids), dtype=torch.long).to(dev),
                        torch.tensor(st_row)[None].to(dev))
             probs.append(torch.softmax(lg.float(), -1)[0].cpu().numpy())
     Pm = np.mean(probs, axis=0)

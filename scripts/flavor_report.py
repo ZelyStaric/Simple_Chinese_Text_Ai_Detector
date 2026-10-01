@@ -44,9 +44,12 @@ def strip_structure(t):
 
 
 def predict_windows(model, tok, text, meta, dev):
-    ids = tok(text, truncation=False)["input_ids"]
-    W = meta["max_len"]; S = max(64, W // 2)
-    wins = [ids[i:i + W] for i in range(0, max(1, len(ids)), S) if ids[i:i + W]]
+    # 按「字符」切窗并重新 tokenize（保留 [CLS]/[SEP]），避免直接切 token 丢掉特殊符号
+    W = meta["max_len"]
+    chars = max(400, W * 2)
+    step = max(200, chars // 2)
+    chunks = [text[i:i + chars] for i in range(0, max(1, len(text)), step)]
+    chunks = [c for c in chunks if c.strip()]
     if meta.get("no_style"):
         st = np.zeros(0, dtype=np.float32)
     else:
@@ -54,11 +57,13 @@ def predict_windows(model, tok, text, meta, dev):
               np.array(meta["style_std"])).astype(np.float32)
     P = []
     with torch.no_grad(), ac(dev):
-        for w in wins:
+        for c in chunks:
+            ids = tok(c, truncation=True, max_length=W)["input_ids"]
+            inp = torch.tensor([ids]).to(dev)
             stb = torch.zeros(1, 0).to(dev) if st.shape[0] == 0 else torch.tensor(st)[None].to(dev)
-            lg = model(torch.tensor([w]).to(dev), torch.ones(1, len(w), dtype=torch.long).to(dev), stb)
+            lg = model(inp, torch.ones_like(inp), stb)
             P.append(torch.softmax(lg.float(), -1)[0].cpu().numpy())
-    return np.mean(P, axis=0), len(wins)
+    return np.mean(P, axis=0), len(chunks)
 
 
 def locate(text):
